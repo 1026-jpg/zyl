@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            cursor: pointer;
+            color: white;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #info-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 14px;
+            color: #555;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        /* 按钮样式 */
+        #next-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #fff;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: none; /* 默认隐藏，粒子聚合后显示 */
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        #next-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 时间地点信息 -->
+    <div id="info-bar">
+        📍 地点：江苏省 连云港市 | 📅 时间：2026-04-26 星期日
+    </div>
+
+    <!-- 跳转按钮 -->
+    <button id="next-btn">点击进入下一页 →</button>
+
+    <canvas id="canvas1"></canvas>
+    <script>
+        /** @type {HTMLCanvasElement} */
+        const canvas = document.getElementById('canvas1');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // DOM元素
+        const nextBtn = document.getElementById('next-btn');
+
+        // 粒子数组
+        let particlesArray = [];
+        let isExploded = false; // 标记是否已经爆炸
+        let isCollected = false; // 标记粒子是否已经回收
+
+        // 处理窗口大小调整
+        window.addEventListener('resize', function(){
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if(!isExploded) init(); // 重置画布时重新初始化文字
+        });
+
+        // 鼠标点击事件
+        window.addEventListener('click', function(e){
+            // 如果点击的是按钮，跳转
+            if (e.target === nextBtn) {
+                window.location.href = "3.html";
+                return;
+            }
+
+            // 如果未爆炸，执行爆炸
+            if (!isExploded) {
+                explode();
+                isExploded = true;
+                return;
+            }
+
+            // 如果已经爆炸且未回收，执行回收
+            if (isExploded && !isCollected) {
+                collect();
+            }
+        });
+
+        // 文字配置 (模拟图片中的布局)
+        const textsConfig = [
+            { text: '我拿着卫生纸，哭了好久', x: 0.80, y: 0.60, size: 50, rotate: 0 },
+            { text: '我就偷偷眯着，直到你推开房门离开', x: 0.32, y: 0.55, size: 50, rotate: 0 },
+            { text: '趁着母亲节，说句悄悄话', x: 0.3, y: 0.4, size: 65, rotate: 0 },
+            { text: '其实那次我醒了', x: 0.18, y: 0.25, size: 69, rotate: 0 },
+            { text: '那年，你去上大学要走了，叫我醒来，我没醒', x: 0.64, y: 0.1, size: 50, rotate: 0 },
+            { text: '我接受不了看着你走', x: 0.80, y: 0.25, size: 60, rotate: 0 },
+            { text: '1嗨!老姨', x: 0.8, y: 0.40, size: 78, rotate: 0 },
+            { text: '您上大学归家总给我带来惊喜', x: 0.750, y: 0.85, size: 55, rotate: 0 },
+            { text: '现在我也上大学了，我开学的时候你是否也有不舍', x: 0.3, y: 0.95, size: 40, rotate: 0},
+            { text: '这次母亲节，是否也给你带来惊喜?', x: 0.39, y: 0.71, size: 60, rotate: 0 },
+        ];
+
+        // 粒子类
+        class Particle {
+            constructor(x, y, color, targetX, targetY){
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.targetX = targetX; // 目标位置X
+                this.targetY = targetY; // 目标位置Y
+                this.size = 2;
+                this.vx = 0;
+                this.vy = 0;
+            }
+
+            update(isCollecting = false){
+                if (isCollecting) {
+                    // 回收逻辑：飞向目标点
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    this.vx = dx * 0.05; // 速度系数
+                    this.vy = dy * 0.05;
+                    this.x += this.vx;
+                    this.y += this.vy;
+                } else {
+                    // 爆炸逻辑
+                    this.vy += 0.15; // 重力
+                    this.vx *= 0.96; // 摩擦
+                    this.vy *= 0.96;
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.size -= 0.05; // 粒子变小
+                }
+            }
+
+            draw(){
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // 初始化：绘制文字
+        function init(){
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 40px Arial';
+            textsConfig.forEach(item => {
+                const x = canvas.width * item.x;
+                const y = canvas.height * item.y;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(item.rotate);
+                ctx.font = `bold ${item.size}px "Microsoft YaHei", sans-serif`;
+                ctx.fillText(item.text, 0, 0);
+                ctx.restore();
+            });
+        }
+
+        // 爆炸逻辑：将文字转换为粒子
+        function explode(){
+            const gap = 4;
+            const pos = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < canvas.height; y += gap){
+                for (let x = 0; x < canvas.width; x += gap){
+                    const index = (y * canvas.width + x) * 4;
+                    const alpha = pos.data[index + 3];
+                    if (alpha > 128){
+                        const r = pos.data[index];
+                        const g = pos.data[index + 1];
+                        const b = pos.data[index + 2];
+                        const color = `rgb(${r},${g},${b})`;
+                        // 随机初始速度
+                        const speed = Math.random() * 10 + 2;
+                        const angle = Math.random() * 360 * Math.PI / 180;
+                        const vx = Math.cos(angle) * speed;
+                        const vy = Math.sin(angle) * speed;
+                        
+                        let p = new Particle(x, y, color, x, y);
+                        p.vx = vx;
+                        p.vy = vy;
+                        particlesArray.push(p);
+                    }
+                }
+            }
+            animate();
+        }
+
+        // 回收逻辑：粒子重新聚合
+        function collect(){
+            // 隐藏按钮
+            nextBtn.style.display = 'none';
+            // 重新初始化画布，获取新的像素点作为目标位置
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            init();
+            
+            const gap = 4;
+            const pos = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 重新构建粒子数组，保留颜色，但更新目标位置
+            let newParticles = [];
+            for (let y = 0; y < canvas.height; y += gap){
+                for (let x = 0; x < canvas.width; x += gap){
+                    const index = (y * canvas.width + x) * 4;
+                    const alpha = pos.data[index + 3];
+                    if (alpha > 128){
+                        const r = pos.data[index];
+                        const g = pos.data[index + 1];
+                        const b = pos.data[index + 2];
+                        const color = `rgb(${r},${g},${b})`;
+                        
+                        // 从旧粒子中找一个颜色相近的粒子，如果没有就新建一个
+                        let oldParticle = particlesArray.find(p => p.color === color) || {x: x, y: y};
+                        
+                        let p = new Particle(oldParticle.x, oldParticle.y, color, x, y);
+                        newParticles.push(p);
+                    }
+                }
+            }
+            particlesArray = newParticles;
+            isCollected = true;
+            animateCollect();
+        }
+
+        // 爆炸动画循环
+        function animate(){
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++){
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            // 过滤掉消失的粒子
+            particlesArray = particlesArray.filter(p => p.size > 0.1);
+            
+            if (particlesArray.length > 0) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // 回收动画循环
+        function animateCollect(){
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let allInPlace = true;
+            
+            for (let i = 0; i < particlesArray.length; i++){
+                particlesArray[i].update(true);
+                particlesArray[i].draw();
+                
+                // 检查是否还有粒子没到位
+                const dx = particlesArray[i].targetX - particlesArray[i].x;
+                const dy = particlesArray[i].targetY - particlesArray[i].y;
+                if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                    allInPlace = false;
+                }
+            }
+
+            if (!allInPlace) {
+                requestAnimationFrame(animateCollect);
+            } else {
+                // 动画结束，显示按钮
+                nextBtn.style.display = 'block';
+            }
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>

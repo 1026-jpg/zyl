@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>照片粒子特效</title>
+<style>
+    body { margin: 0; padding: 0; background-color: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    canvas { display: block; }
+    #ui { position: absolute; top: 20px; z-index: 10; text-align: center; }
+    button { padding: 10px 20px; font-size: 16px; background-color: #ff69b4; color: white; border: none; border-radius: 5px; cursor: pointer; box-shadow: 0 0 10px #ff69b4; display: none;}
+    button:hover { background-color: #ff1493; }
+    #source-img { display: none; }
+</style>
+</head>
+<body>
+
+
+
+<img id="source-img" src="" alt="Source"> <!-- src留空，js会自动填第一张 -->
+<canvas id="canvas1"></canvas>
+
+
+<a href="4.html" id="enterBtn"style="opacity: 0;transition:opacity 1s ease-in-out;    position: fixed; top: 90%; left: 80%; transform: translate(-50%, -50%); color: white; font-size: 20px; text-decoration: none; background: rgba(0,0,0,0.5); padding: 10px 20px; border: 1px solid white; z-index: 999;">
+     观看结束 
+	 <p style="color: #ff69b4;font-size: 12px;">(点击非按钮位置进行观看下一页)</p>
+</a >
+	
+<script>
+    // 1. 图片路径数组
+    const imageList = [ 
+        'pop/1.jpg', 
+        'pop/2.jpg',
+		'pop/3.jpg',
+		'pop/4.jpg',
+		'pop/5.jpg',
+		'pop/6.jpg',
+		'pop/7.jpg',
+		'pop/8.jpg',
+		 'pop/9.jpg'
+    ];
+    
+    let currentImgIndex = 0;
+    const canvas = document.getElementById('canvas1');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particleArray = [];
+    // 设定统一的图片显示大小（正方形）
+    const targetImgWidth = 600;
+    const targetImgHeight = 800;
+	
+
+    // 粒子类（保持不变）
+    class Particle {
+        constructor(x, y, color){
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.originX = x;
+            this.originY = y;
+            this.size = 2;
+            this.color = color;
+            this.density = (Math.random() * 30) + 1;
+        }
+
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        update() {
+            // 鼠标排斥力
+            if(mouse.x && mouse.y){
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx*dx + dy*dy);
+                if (distance < mouse.radius) {
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    let force = (mouse.radius - distance) / mouse.radius;
+                    let directionX = forceDirectionX * force * this.density * 2;
+                    let directionY = forceDirectionY * force * this.density * 2;
+                    this.x -= directionX;
+                    this.y -= directionY;
+                }
+            }
+
+            // 吸附回原位
+            let dx = this.originX - this.x;
+            let dy = this.originY - this.y;
+            this.x += dx / 15;
+            this.y += dy / 15;
+        }
+    }
+
+    // 初始化函数
+    function init() {
+        particleArray = [];
+        const img = document.getElementById('source-img');
+        
+        // 2. 计算居中位置（固定大小）
+        let imgX = (canvas.width - targetImgWidth) / 2;
+        let imgY = (canvas.height - targetImgHeight) / 2;
+
+        // 清空画布并绘制固定大小的图片
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // 关键修改：强制把图片画成 400x400，不管原图比例
+        ctx.drawImage(img, imgX, imgY, targetImgWidth, targetImgHeight);
+        
+        // 获取像素数据
+        const imgData = ctx.getImageData(imgX, imgY, targetImgWidth, targetImgHeight).data;
+        
+        // 生成粒子
+        const gap = 4;
+        for (let y = 0; y < targetImgHeight; y += gap) {
+            for (let x = 0; x < targetImgWidth; x += gap) {
+                const index = (y * targetImgWidth + x) * 4;
+                const alpha = imgData[index + 3];
+                
+                if (alpha > 128){
+                    const r = imgData[index];
+                    const g = imgData[index + 1];
+                    const b = imgData[index + 2];
+                    const color = `rgb(${r},${g},${b})`;
+                    particleArray.push(new Particle(x + imgX, y + imgY, color));
+                }
+            }
+        }
+    }
+
+    // 爆炸效果
+    function explode() {
+        particleArray.forEach(p => {
+            // 随机飞散方向
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 5 + 3;
+            p.x += Math.cos(angle) * speed * 20;
+            p.y += Math.sin(angle) * speed * 20;
+        });
+    }
+
+    // 动画循环
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particleArray.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        requestAnimationFrame(animate);
+    }
+
+    // 修复后的按钮点击函数
+    function handleButtonClick() {
+            // 1. 先切换图片：更新索引 + 换图
+            currentImgIndex = (currentImgIndex + 1) % imageList.length;
+            const img = document.getElementById('source-img');
+            
+            // 2. 监听新图片加载完成
+            img.onload = function() {
+                // 3. 图片加载好后，先爆炸（炸开的是上一帧的旧粒子）
+                
+                // 4. 延迟一点时间，让爆炸动画播放一下
+                // 然后执行 init，这时候 init 读取的是刚才换好的新图片
+                setTimeout(init, 600);
+            };
+            
+            // 5. 关键：这里触发图片加载（放在 onload 之后）
+            img.src = imageList[currentImgIndex];
+        }
+    
+        // 页面加载
+        window.addEventListener('load', function() {
+            const img = document.getElementById('source-img');
+            img.src = imageList[currentImgIndex]; // 先加载第一张
+            img.onload = function() {
+                init(); 
+                animate();
+            };
+        });
+
+
+    // 页面加载
+    window.addEventListener('load', function() {
+        const img = document.getElementById('source-img');
+        img.src = imageList[currentImgIndex]; // 先加载第一张
+        img.onload = function() {
+            init();
+            animate();
+        };
+    });
+
+    // 窗口变化
+    window.addEventListener('resize', function(){
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+// 窗口变化时，重新 init 保持位置居中
+if(document.getElementById('source-img').complete) {
+    init();
+}
+});
+
+// 在这里添加点击监听代码（加在下面）：
+window.addEventListener('click', handleButtonClick);
+
+    // 鼠标对象（定义在最后，确保上面能用）
+    const mouse = { x: null, y: null, radius: 100 };
+    window.addEventListener('mousemove', function(event){
+        mouse.x = event.x;
+        mouse.y = event.y;
+    });
+	
+	
+	// 强制等待 2 秒（2000毫秒）后再显示按钮
+	setTimeout(function(){
+	    var btn = document.getElementById('enterBtn');
+	    btn.style.opacity = '1';
+	}, 2000); // 这里的 2000 可以改成 3000 或 4000，代表等待的毫秒数
+	
+</script>
+
+</body>
+</html>
