@@ -1,1 +1,173 @@
-# zyl
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>母亲节快乐 爱心代码</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: "微软雅黑", sans-serif;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .text-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 130px;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+        }
+        .text-container.show {
+            opacity: 1;
+        }
+        /* 爱心容器 */
+        .heart-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            cursor: pointer;
+        }
+        .heart-container.show {
+            opacity: 1;
+        }
+        /* 爱心形状 */
+        .heart {
+            width: 200px;
+            height: 180px;
+            background: #ff77aa;
+            clip-path: path('M100,180 C50,140 0,100 0,60 C0,20 50,0 100,40 C150,0 200,20 200,60 C200,100 150,140 100,180 Z');
+        }
+        /* 爱心中的文字 */
+        .heart-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- 文字容器 -->
+    <div class="text-container" id="text1">亲爱的老姨</div>
+    <div class="text-container" id="text2">祝您</div>
+    <div class="text-container" id="text3">母亲节快乐</div>
+    <div class="text-container" id="text4">感恩有您</div>
+    <div class="text-container" id="text5">3! 2! 1!</div>
+
+    <!-- 爱心 + 文字 -->
+    <div class="heart-container" id="heartWrap">
+        <div class="heart">
+            <a class="heart-text" href="2.html" style="text-decoration: none;font-size: 45px;">请点击</a>
+        </div>
+    </div>
+
+    <script>
+        // 1. 粉色代码雨背景
+        function createCodeRain() {
+            const canvas = document.createElement('canvas');
+            document.body.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const chars = '老姨 母亲节快乐 您的付出是不求回报的温柔 准备好了么 看看我的小心意吧';
+            const columns = canvas.width / 10;
+            const drops = [];
+            for (let i = 0; i < columns; i++) {
+                drops[i] = Math.random() * -50;
+            }
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ff99cc';
+                ctx.font = '10px monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const char = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(char, i * 10, drops[i] * 10);
+                    if (drops[i] * 10 > canvas.height || Math.random() > 0.95) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+        createCodeRain();
+
+        // 2. 顺序播放文字，自动消失
+        async function startPlay() {
+            const wait = t => new Promise(res => setTimeout(res, t));
+            let t1 = document.getElementById('text1');
+            t1.classList.add('show');
+            await wait(2000);
+            t1.classList.remove('show');
+            await wait(500);
+
+            let t2 = document.getElementById('text2');
+            t2.classList.add('show');
+            await wait(2000);
+            t2.classList.remove('show');
+            await wait(500);
+
+            let t3 = document.getElementById('text3');
+            t3.classList.add('show');
+            await wait(2500);
+            t3.classList.remove('show');
+            await wait(500);
+
+            let t4 = document.getElementById('text4');
+            t4.classList.add('show');
+            await wait(2000);
+            t4.classList.remove('show');
+            await wait(500);
+
+            let t5 = document.getElementById('text5');
+            t5.classList.add('show');
+            await wait(2000);
+            t5.classList.remove('show');
+            await wait(500);
+
+            document.getElementById('heartWrap').classList.add('show');
+        }
+        startPlay();
+
+        
+
+        // 窗口自适应
+        window.onresize = () => {
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(c => {
+                c.width = window.innerWidth;
+                c.height = window.innerHeight;
+            });
+        };
+    </script>
+</body>
+</html>
